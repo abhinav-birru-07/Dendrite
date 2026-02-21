@@ -53,6 +53,29 @@ All context for a node is computed by traversing from root → current node, eli
 ### Prerequisites
 - Node.js 16+ 
 - npm or yarn
+- Google Gemini API key (or other LLM API key)
+
+### 0. Environment Setup
+
+Create a `.env` file in the `server/` directory with your API key:
+
+```bash
+cd server
+touch .env
+```
+
+Add the following (get your key from [Google AI Studio](https://aistudio.google.com/)):
+
+```env
+GEMINI_API_KEY=your_gemini_api_key_here
+```
+
+**Example:**
+```env
+GEMINI_API_KEY=AIzaSyD_rXxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+```
+
+> ⚠️ **Never commit `.env` file** - it's already in `.gitignore`
 
 ### 1. Backend Setup
 
