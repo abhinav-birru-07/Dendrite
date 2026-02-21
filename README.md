@@ -194,12 +194,3 @@ Back to Root
 
 Switch between branches via sidebar
 All maintain inherited context from root
-```
-
-## License
-
-MIT
-
----
-
-**Questions?** Check the architecture design in the root directory or explore the codebase. The context engine is the core — understand that first!
