@@ -168,3 +168,80 @@
   display: flex;
   flex-direction: column;
 }
+
+/* Context Section */
+.context-section {
+  margin-top: 16px;
+  padding-top: 12px;
+  border-top: 1px solid #30363d;
+}
+
+.context-toggle {
+  width: 100%;
+  padding: 8px 12px;
+  background: transparent;
+  border: 1px solid #30363d;
+  border-radius: 4px;
+  color: #8b949e;
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 600;
+  text-align: left;
+  transition: all 0.2s;
+}
+
+.context-toggle:hover {
+  background: #262d33;
+  border-color: #58a6ff;
+  color: #58a6ff;
+}
+
+.context-list {
+  margin-top: 8px;
+  max-height: 300px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.context-item {
+  padding: 8px;
+  background: #0d1117;
+  border: 1px solid #30363d;
+  border-radius: 3px;
+  font-size: 10px;
+  color: #c9d1d9;
+}
+
+.context-item.user {
+  background: rgba(35, 134, 54, 0.15);
+  border-color: rgba(35, 134, 54, 0.3);
+}
+
+.context-item.assistant {
+  background: rgba(88, 166, 255, 0.1);
+  border-color: rgba(88, 166, 255, 0.2);
+}
+
+.context-role {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-bottom: 4px;
+  font-weight: 600;
+  color: #8b949e;
+}
+
+.context-branch {
+  font-size: 9px;
+  color: #58a6ff;
+  background: rgba(88, 166, 255, 0.2);
+  padding: 1px 4px;
+  border-radius: 2px;
+}
+
+.context-text {
+  word-break: break-word;
+  line-height: 1.3;
+}

@@ -34,14 +34,18 @@ export default function ChatArea({ nodes, currentNodeId, contextPath, onSendMess
   }
 
   const currentNode = nodes[currentNodeId]
-  const breadcrumb = contextPath
-    .filter(msg => msg.role !== 'system')
-    .map((msg, i) => (
-      <span key={i}>
-        {msg.branchLabel ? `[${msg.branchLabel}]` : msg.role === 'user' ? 'Q' : 'A'}
-        {i < contextPath.filter(m => m.role !== 'system').length - 1 ? ' > ' : ''}
-      </span>
-    ))
+
+  // Build breadcrumb showing path from Main to current branch
+  const getBranchPath = () => {
+    const branchNodes = contextPath.filter(msg => msg.branchLabel)
+    if (branchNodes.length === 0) {
+      return 'Main'
+    }
+    const path = ['Main', ...branchNodes.map(node => `[${node.branchLabel}]`)]
+    return path.join(' > ')
+  }
+
+  const breadcrumb = getBranchPath()
 
   return (
     <div className="chat-container">
@@ -52,37 +56,12 @@ export default function ChatArea({ nodes, currentNodeId, contextPath, onSendMess
         </div>
       </div>
 
-      {/* Context Preview */}
-      {contextPath.length > 0 && (
-        <div className="context-preview">
-          <div className="context-header">
-            📋 Context ({contextPath.length} items)
-            <button className="toggle-btn" title="Hide context">−</button>
-          </div>
-          <div className="context-content">
-            {contextPath.filter(msg => msg.role !== 'system').slice(0, 2).map((msg, i) => (
-              <div key={i} className={`context-item ${msg.role}`}>
-                <strong>{msg.role === 'user' ? 'You' : 'AI'}</strong>: {msg.content.substring(0, 80)}...
-              </div>
-            ))}
-            {contextPath.filter(msg => msg.role !== 'system').length > 2 && (
-              <div className="context-more">
-                +{contextPath.filter(msg => msg.role !== 'system').length - 2} more messages
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-
       {/* Messages */}
       <div className="messages-container">
         {contextPath
           .filter(msg => msg.role !== 'system')
           .map((msg, i) => (
             <div key={i} className={`message ${msg.role}`}>
-              <div className="message-avatar">
-                {msg.role === 'user' ? '👤' : '🤖'}
-              </div>
               <div className="message-content">
                 {msg.branchLabel && (
                   <div className="branch-label">🌿 {msg.branchLabel}</div>

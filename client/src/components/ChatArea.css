@@ -107,12 +107,10 @@
   justify-content: flex-end;
 }
 
-.message.user .message-avatar {
-  order: 2;
-}
-
 .message.user .message-content {
-  order: 1;
+  flex: 0 1 auto;
+  width: fit-content;
+  max-width: 70%;
   text-align: right;
 }
 
@@ -122,7 +120,7 @@
 }
 
 .message-content {
-  flex: 1;
+  flex: 0 1 70%;
   max-width: 70%;
 }
 

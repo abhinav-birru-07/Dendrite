@@ -1,132 +1,171 @@
-import React, { useState, useEffect, useRef } from 'react'
+import React, { useState, useEffect } from 'react'
 import { api } from './api'
-import ConversationTree from './components/ConversationTree'
+import Sidebar from './components/Sidebar'
 import ChatArea from './components/ChatArea'
 import './App.css'
 
 export default function App() {
-  const [conversationId, setConversationId] = useState(null)
+  const [conversations, setConversations] = useState([])
+  const [currentConversationId, setCurrentConversationId] = useState(null)
   const [nodes, setNodes] = useState({})
   const [rootNodeId, setRootNodeId] = useState(null)
   const [currentNodeId, setCurrentNodeId] = useState(null)
   const [loading, setLoading] = useState(false)
   const [contextPath, setContextPath] = useState([])
+  const [initialized, setInitialized] = useState(false)
 
-  // Initialize conversation
+  const loadConversation = async (conversationId) => {
+    const { data } = await api.getConversation(conversationId)
+    setCurrentConversationId(conversationId)
+    setNodes(data.nodes)
+    setRootNodeId(data.rootNodeId)
+    setCurrentNodeId(data.rootNodeId)
+    setContextPath([])
+  }
+
   useEffect(() => {
-    const initConversation = async () => {
+    const init = async () => {
       try {
-        const { data } = await api.createConversation()
-        setConversationId(data.conversationId)
-        setRootNodeId(data.rootNodeId)
-        setCurrentNodeId(data.rootNodeId)
-      } catch (error) {
-        console.error('Failed to create conversation:', error)
+        const { data } = await api.listConversations()
+        if (data.conversations.length > 0) {
+          setConversations(data.conversations)
+          await loadConversation(data.conversations[0].id)
+        } else {
+          await handleNewChat(true)
+        }
+      } catch (e) {
+        console.error('Init failed:', e)
+      } finally {
+        setInitialized(true)
       }
     }
-
-    initConversation()
+    init()
   }, [])
 
-  // Load conversation tree when conversationId changes
   useEffect(() => {
-    if (!conversationId) return
+    if (!currentConversationId || !currentNodeId) return
+    api.getContextPath(currentConversationId, currentNodeId)
+      .then(({ data }) => setContextPath(data.contextPath))
+      .catch(console.error)
+  }, [currentConversationId, currentNodeId])
 
-    const loadConversation = async () => {
-      try {
-        const { data } = await api.getConversation(conversationId)
-        setNodes(data.nodes)
-      } catch (error) {
-        console.error('Failed to load conversation:', error)
-      }
+  const handleNewChat = async (skipStateUpdate = false) => {
+    // React passes an event object by default if used in onClick.
+    const shouldSkip = skipStateUpdate === true;
+    try {
+      const { data } = await api.createConversation()
+      const newConv = { id: data.conversationId, rootNodeId: data.rootNodeId, name: null, createdAt: Date.now() }
+      if (!shouldSkip) setConversations(prev => [newConv, ...prev])
+      else setConversations([newConv])
+      const { data: convData } = await api.getConversation(data.conversationId)
+      setCurrentConversationId(data.conversationId)
+      setNodes(convData.nodes)
+      setRootNodeId(data.rootNodeId)
+      setCurrentNodeId(data.rootNodeId)
+      setContextPath([])
+    } catch (e) {
+      console.error('New chat failed:', e)
     }
+  }
 
-    loadConversation()
-  }, [conversationId])
+  const handleSelectConversation = async (conversationId) => {
+    if (conversationId === currentConversationId) return
+    try { await loadConversation(conversationId) }
+    catch (e) { console.error('Switch conversation failed:', e) }
+  }
 
-  // Update context path when current node changes
-  useEffect(() => {
-    if (!conversationId || !currentNodeId) return
-
-    const loadContextPath = async () => {
-      try {
-        const { data } = await api.getContextPath(conversationId, currentNodeId)
-        setContextPath(data.contextPath)
-      } catch (error) {
-        console.error('Failed to load context path:', error)
-        alert(`Failed to load context: ${error.message}`)
-      }
-    }
-
-    loadContextPath()
-  }, [conversationId, currentNodeId])
-
-  // Handle sending message
   const handleSendMessage = async (message, branchLabel = null) => {
-    if (!conversationId || !currentNodeId) return
-
+    if (!currentConversationId || !currentNodeId) return
     setLoading(true)
     try {
-      const { data } = await api.sendMessage(
-        conversationId,
-        message,
-        currentNodeId,
-        branchLabel
-      )
-
+      const { data } = await api.sendMessage(currentConversationId, message, currentNodeId, branchLabel)
       setNodes(data.tree)
       setCurrentNodeId(data.assistantNodeId)
-    } catch (error) {
-      console.error('Failed to send message:', error)
-      alert(`Error: ${error.response?.data?.error || error.message}`)
+      if (data.generatedName) {
+        setConversations(prev =>
+          prev.map(c => c.id === currentConversationId ? { ...c, name: data.generatedName } : c)
+        )
+      }
+    } catch (e) {
+      alert(`Error: ${e.response?.data?.error || e.message}`)
     } finally {
       setLoading(false)
     }
   }
 
-  // Handle node click in tree
-  const handleSelectNode = (nodeId) => {
+  const handleSelectNode = async (nodeId) => {
     setCurrentNodeId(nodeId)
-    // Force reload context path
-    const reloadContext = async () => {
-      try {
-        const { data } = await api.getContextPath(conversationId, nodeId)
-        setContextPath(data.contextPath)
-      } catch (error) {
-        console.error('Failed to load context path:', error)
+    try {
+      const { data } = await api.getContextPath(currentConversationId, nodeId)
+      setContextPath(data.contextPath)
+    } catch (e) { console.error(e) }
+  }
+
+  const handleRenameConversation = async (conversationId, name) => {
+    try {
+      await api.renameConversation(conversationId, name)
+      setConversations(prev => prev.map(c => c.id === conversationId ? { ...c, name } : c))
+    } catch (e) { console.error(e) }
+  }
+
+  const handleRenameBranch = async (nodeId, branchLabel) => {
+    try {
+      await api.renameBranch(currentConversationId, nodeId, branchLabel)
+      setNodes(prev => ({ ...prev, [nodeId]: { ...prev[nodeId], branchLabel } }))
+    } catch (e) { console.error(e) }
+  }
+
+  const handleDeleteConversation = async (conversationId) => {
+    try {
+      await api.deleteConversation(conversationId)
+      const remaining = conversations.filter(c => c.id !== conversationId)
+      setConversations(remaining)
+      if (conversationId === currentConversationId) {
+        if (remaining.length > 0) await loadConversation(remaining[0].id)
+        else await handleNewChat(true)
       }
-    }
-    reloadContext()
+    } catch (e) { console.error(e) }
+  }
+
+  if (!initialized) {
+    return (
+      <div className="app">
+        <div className="loading-screen">
+          <div className="spinner"></div>
+          <p>Loading Dendrite...</p>
+        </div>
+      </div>
+    )
   }
 
   return (
     <div className="app">
-      {!conversationId ? (
-        <div className="loading-screen">
-          <div className="spinner"></div>
-          <p>Initializing conversation...</p>
+      <div className="container">
+        <div className="sidebar">
+          <Sidebar
+            conversations={conversations}
+            currentConversationId={currentConversationId}
+            nodes={nodes}
+            rootNodeId={rootNodeId}
+            currentNodeId={currentNodeId}
+            onNewChat={handleNewChat}
+            onSelectConversation={handleSelectConversation}
+            onSelectNode={handleSelectNode}
+            onRenameConversation={handleRenameConversation}
+            onRenameBranch={handleRenameBranch}
+            onDeleteConversation={handleDeleteConversation}
+          />
         </div>
-      ) : (
-        <div className="container">
-          <div className="sidebar">
-            <ConversationTree
-              nodes={nodes}
-              rootNodeId={rootNodeId}
-              currentNodeId={currentNodeId}
-              onSelectNode={handleSelectNode}
-            />
-          </div>
-          <div className="main">
-            <ChatArea
-              nodes={nodes}
-              currentNodeId={currentNodeId}
-              contextPath={contextPath}
-              onSendMessage={handleSendMessage}
-              loading={loading}
-            />
-          </div>
+        <div className="main">
+          <ChatArea
+            nodes={nodes}
+            currentNodeId={currentNodeId}
+            contextPath={contextPath}
+            onSendMessage={handleSendMessage}
+            loading={loading}
+          />
         </div>
-      )}
+      </div>
     </div>
   )
 }

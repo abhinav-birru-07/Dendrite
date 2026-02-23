@@ -1,8 +1,9 @@
 import React, { useState } from 'react'
 import './ConversationTree.css'
 
-export default function ConversationTree({ nodes, rootNodeId, currentNodeId, onSelectNode }) {
+export default function ConversationTree({ nodes, rootNodeId, currentNodeId, onSelectNode, contextPath }) {
   const [expanded, setExpanded] = useState({})
+  const [showContext, setShowContext] = useState(false)
 
   // Get last node in a linear chain (stop before branch labels)
   const getLastNodeInChain = (nodeId) => {
@@ -151,9 +152,37 @@ export default function ConversationTree({ nodes, rootNodeId, currentNodeId, onS
           <p className="hint">Send a message to start</p>
         </div>
       ) : (
-        <div className="tree-root">
-          {renderBranch(rootNodeId)}
-        </div>
+        <>
+          <div className="tree-root">
+            {renderBranch(rootNodeId)}
+          </div>
+
+          {/* Context Section */}
+          {contextPath && contextPath.filter(msg => msg.role !== 'system').length > 0 && (
+            <div className="context-section">
+              <button 
+                className="context-toggle"
+                onClick={() => setShowContext(!showContext)}
+                title={showContext ? "Hide context" : "Show context"}
+              >
+                📋 Context ({contextPath.filter(msg => msg.role !== 'system').length}) {showContext ? '▼' : '▶'}
+              </button>
+              {showContext && (
+                <div className="context-list">
+                  {contextPath.filter(msg => msg.role !== 'system').map((msg, i) => (
+                    <div key={i} className={`context-item ${msg.role}`}>
+                      <div className="context-role">
+                        {msg.role === 'user' ? '👤' : '🤖'}
+                        {msg.branchLabel && <span className="context-branch">[{msg.branchLabel}]</span>}
+                      </div>
+                      <div className="context-text">{msg.content.substring(0, 60)}{msg.content.length > 60 ? '...' : ''}</div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+        </>
       )}
     </div>
   )
